@@ -9,6 +9,7 @@ import ru.practicum.dto.ViewStatsDto;
 
 import java.util.List;
 
+@Service
 @RequiredArgsConstructor
 public class StatsClient {
     private final WebClient webClient;
