@@ -9,6 +9,7 @@ import ru.practicum.server.model.ViewStats;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Repository
 public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
     @Query("SELECT new ru.practicum.server.model.ViewStats(eh.app, eh.uri, count (eh.ip)) " +
             "FROM EndpointHit AS eh " +
