@@ -10,7 +10,6 @@ import ru.practicum.ewm.event.model.Event;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,21 +18,17 @@ import java.util.stream.Collectors;
 @Service
 public class StatisticServiceImpl implements StatisticService {
     private final StatsClient statsClient;
-    private final String appName;
 
     @Autowired
-    public StatisticServiceImpl(@Value("${stats-server.url}") String url,
-                                @Value("${application.name}") String appName,
-                                StatsClient statsClient) {
-        this.statsClient = statsClient;
-        this.appName = appName;
+    public StatisticServiceImpl(@Value("${stats-server.url}") String url) {
+        this.statsClient = new StatsClient(url);
     }
 
 
     @Override
     public void addView(HttpServletRequest request) {
         statsClient.create(EndpointHitDto.builder()
-                .app(appName)
+                .app("ewm-main")
                 .uri(request.getRequestURI())
                 .ip(request.getRemoteAddr())
                 .timestamp(LocalDateTime.now())
@@ -42,16 +37,11 @@ public class StatisticServiceImpl implements StatisticService {
 
     @Override
     public Map<Long, Long> getStatsEvents(List<Event> events) {
-        if (events == null || events.isEmpty()) {
-            return null;
-        }
         List<Long> ids = events.stream()
                 .map(Event::getId)
                 .collect(Collectors.toList());
 
-        events.stream().sorted(Comparator.comparing(Event::getCreatedOn)).collect(Collectors.toList());
-
-        LocalDateTime start = events.get(0).getCreatedOn();
+        LocalDateTime start = LocalDateTime.now().minusYears(100);
         LocalDateTime end = LocalDateTime.now();
         String eventsUri = "/events/";
         List<String> uris = ids.stream()
@@ -63,6 +53,7 @@ public class StatisticServiceImpl implements StatisticService {
         for (ViewStatsDto view : views) {
             String uri = view.getUri();
             viewsMap.put(Long.parseLong(uri.substring(eventsUri.length())), view.getHits());
+
         }
         return viewsMap;
     }

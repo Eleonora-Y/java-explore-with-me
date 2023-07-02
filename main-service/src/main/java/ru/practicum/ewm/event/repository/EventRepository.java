@@ -14,7 +14,7 @@ import java.util.Set;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-    boolean existsByCategory(Category category);
+    List<Event> findByCategory(Category category);
 
     Set<Event> findAllByIdIn(Set<Long> eventIds);
 
@@ -41,6 +41,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "and (:paid is null or e.paid = :paid) " +
             "and (cast(:rangeStart as java.time.LocalDateTime) is null or e.eventDate >= :rangeStart) " +
             "and (cast(:rangeEnd as java.time.LocalDateTime) is null or e.eventDate <= :rangeEnd) " +
+            "and (e.participantLimit > e.confirmedRequests) " +
             "order by e.eventDate desc")
     List<Event> getAvailableEventsWithFiltersDateSorted(@Param("text") String text,
                                                         @Param("state") EventState state,
@@ -57,7 +58,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "and (:categories is null or e.category.id in :categories) " +
             "and (:paid is null or e.paid = :paid) " +
             "and (cast(:rangeStart as java.time.LocalDateTime) is null or e.eventDate >= :rangeStart) " +
-            "and (cast(:rangeEnd as java.time.LocalDateTime) is null or e.eventDate <= :rangeEnd) ")
+            "and (cast(:rangeEnd as java.time.LocalDateTime) is null or e.eventDate <= :rangeEnd) " +
+            "and (e.participantLimit > e.confirmedRequests)")
     List<Event> getAvailableEventsWithFilters(@Param("text") String text,
                                               @Param("state") EventState state,
                                               @Param("categories") List<Long> categories,

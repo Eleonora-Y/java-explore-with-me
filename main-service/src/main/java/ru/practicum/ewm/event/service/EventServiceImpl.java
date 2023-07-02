@@ -9,7 +9,7 @@ import ru.practicum.ewm.category.repository.CategoryRepository;
 import ru.practicum.ewm.event.dto.*;
 import ru.practicum.ewm.event.mapper.EventMapper;
 import ru.practicum.ewm.event.model.Event;
-import ru.practicum.ewm.location.model.Location;
+import ru.practicum.ewm.event.model.Location;
 import ru.practicum.ewm.event.model.enums.EventSort;
 import ru.practicum.ewm.event.model.enums.EventState;
 import ru.practicum.ewm.event.model.enums.EventStateAction;
@@ -33,7 +33,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
 @Service
@@ -64,14 +63,10 @@ public class EventServiceImpl implements EventService {
                 users, states1, categories, start, end, page);
 
         Map<Long, Long> views = statisticService.getStatsEvents(events);
-
-        List<EventDto> result = events.stream()
+        return events.stream()
                 .map(EventMapper::toEventDto)
                 .peek(e -> e.setViews(views.get(e.getId())))
                 .collect(Collectors.toList());
-
-        setComfirmedRequests(result);
-        return result;
     }
 
     @Override
@@ -127,21 +122,14 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> views = statisticService.getStatsEvents(List.of(event));
         EventDto eventDto = EventMapper.toEventDto(event);
         eventDto.setViews(views.getOrDefault(event.getId(), 0L));
-        setComfirmedRequests(List.of(eventDto));
         return eventDto;
     }
 
     @Override
-    public Collection<EventDto> getAllEvents(String text, List<Long> categories, Boolean paid,
+    public Collection<EventShortDto> getAllEvents(String text, List<Long> categories, Boolean paid,
                                              LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                              boolean onlyAvailable, String sort, Pageable page, HttpServletRequest request) {
-
-        if (rangeStart != null && rangeEnd != null) {
-            if (rangeStart.isAfter(rangeEnd) || rangeEnd.isBefore(LocalDateTime.now())) {
-                throw new ValidationException("Окончание события не может быть раньше начала события, " +
-                        "а так же окончание события не может быть позже настоящего времени.");
-            }
-        }
+        checkStartAndEnd(rangeStart, rangeEnd);
 
         List<Event> events = new ArrayList<>();
 
@@ -156,25 +144,20 @@ public class EventServiceImpl implements EventService {
                                 text, EventState.PUBLISHED, categories, paid, rangeStart, rangeEnd, page);
                         statisticService.addView(request);
                         Map<Long, Long> view = statisticService.getStatsEvents(events);
-                        List<EventDto> result = events.stream()
-                                .map(EventMapper::toEventDto)
+                        return events.stream()
+                                .map(EventMapper::toEventShortDto)
                                 .peek(e -> e.setViews(view.get(e.getId())))
                                 .collect(Collectors.toList());
-                        setComfirmedRequests(result);
-
-                        return result;
                     case VIEWS:
                         events = eventRepository.getAvailableEventsWithFilters(
                                 text, EventState.PUBLISHED, categories, paid, rangeStart, rangeEnd, page);
                         statisticService.addView(request);
                         Map<Long, Long> view1 = statisticService.getStatsEvents(events);
-                        List<EventDto> result1 = events.stream()
-                                .map(EventMapper::toEventDto)
+                        return events.stream()
+                                .map(EventMapper::toEventShortDto)
                                 .peek(e -> e.setViews(view1.get(e.getId())))
-                                .sorted(Comparator.comparing(EventDto::getViews))
+                                .sorted(Comparator.comparing(EventShortDto::getViews))
                                 .collect(Collectors.toList());
-                        setComfirmedRequests(result1);
-                        return result1;
                 }
             }
         } else {
@@ -188,36 +171,29 @@ public class EventServiceImpl implements EventService {
                                 text, EventState.PUBLISHED, categories, paid, rangeStart, rangeEnd, page);
                         statisticService.addView(request);
                         Map<Long, Long> view = statisticService.getStatsEvents(events);
-                        List<EventDto> result = events.stream()
-                                .map(EventMapper::toEventDto)
+                        return events.stream()
+                                .map(EventMapper::toEventShortDto)
                                 .peek(e -> e.setViews(view.get(e.getId())))
                                 .collect(Collectors.toList());
-                        setComfirmedRequests(result);
-                        return result;
-
                     case VIEWS:
                         events = eventRepository.getAllEventsWithFilters(
                                 text, EventState.PUBLISHED, categories, paid, rangeStart, rangeEnd, page);
                         statisticService.addView(request);
                         Map<Long, Long> view1 = statisticService.getStatsEvents(events);
-                        List<EventDto> result1 = events.stream()
-                                .map(EventMapper::toEventDto)
+                        return events.stream()
+                                .map(EventMapper::toEventShortDto)
                                 .peek(e -> e.setViews(view1.get(e.getId())))
-                                .sorted(Comparator.comparing(EventDto::getViews))
+                                .sorted(Comparator.comparing(EventShortDto::getViews))
                                 .collect(Collectors.toList());
-                        setComfirmedRequests(result1);
-                        return result1;
                 }
             }
         }
         statisticService.addView(request);
         Map<Long, Long> view = statisticService.getStatsEvents(events);
-        List<EventDto> result = events.stream()
-                .map(EventMapper::toEventDto)
+        return events.stream()
+                .map(EventMapper::toEventShortDto)
                 .peek(e -> e.setViews(view.get(e.getId())))
                 .collect(Collectors.toList());
-        setComfirmedRequests(result);
-        return result;
     }
 
     @Override
@@ -243,7 +219,7 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> views = statisticService.getStatsEvents(List.of(event));
         EventDto eventDto = EventMapper.toEventDto(event);
         eventDto.setViews(views.getOrDefault(event.getId(), 0L));
-        setComfirmedRequests(List.of(eventDto));
+
         return eventDto;
     }
 
@@ -254,7 +230,6 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> views = statisticService.getStatsEvents(List.of(event));
         EventDto eventDto = EventMapper.toEventDto(event);
         eventDto.setViews(views.getOrDefault(event.getId(), 0L));
-        setComfirmedRequests(List.of(eventDto));
         return eventDto;
     }
 
@@ -308,7 +283,7 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> views = statisticService.getStatsEvents(List.of(event));
         EventDto eventDto = EventMapper.toEventDto(eventRepository.save(event));
         eventDto.setViews(views.getOrDefault(event.getId(), 0L));
-        setComfirmedRequests(List.of(eventDto));
+
         return eventDto;
     }
 
@@ -328,7 +303,7 @@ public class EventServiceImpl implements EventService {
         Event event = getEventById(eventId);
         List<Request> requestsEvent = requestRepository.findAllByEventId(eventId);
 
-        if (event.getParticipantLimit() <= requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED)) {
+        if (event.getParticipantLimit() <= event.getConfirmedRequests()) {
             throw new ConflictException("Превышен лимит участников мероприятия.");
         }
 
@@ -432,24 +407,21 @@ public class EventServiceImpl implements EventService {
             EventRequestStatusUpdateResult eventRequestStatusUpdateResult, Request request, Event event) {
         if (request.getStatus().equals(RequestStatus.CONFIRMED)) {
             eventRequestStatusUpdateResult.getConfirmedRequests().add(RequestMapper.toParticipationRequestDto(request));
+            event.setConfirmedRequests(event.getConfirmedRequests() + 1);
         } else if (request.getStatus().equals(RequestStatus.REJECTED)) {
             eventRequestStatusUpdateResult.getRejectedRequests().add(RequestMapper.toParticipationRequestDto(request));
         }
     }
 
-    private List<Long> getIds(List<EventDto> events) {
-        return events.stream()
-                .map(EventDto::getId)
-                .collect(Collectors.toList());
-    }
-
-    private void setComfirmedRequests(List<EventDto> eventDtos) {
-        List<Request> requestList = requestRepository.findAllByEventIdInAndStatus(getIds(eventDtos), RequestStatus.CONFIRMED);
-        Map<Long, Long> eventIdToConfirmedCount = requestList.stream()
-                .collect(groupingBy(r -> r.getEvent().getId(), Collectors.counting()));
-
-        for (EventDto eventDto : eventDtos) {
-            eventDto.setConfirmedRequests(eventIdToConfirmedCount.getOrDefault(eventDto.getId(), 0L));
+    private void checkStartAndEnd(LocalDateTime start, LocalDateTime end) {
+        if (start == null) {
+            start = LocalDateTime.now().minusYears(10);
+        }
+        if (end == null) {
+            end = LocalDateTime.now();
+        }
+        if (start.isAfter(end)) {
+            throw new ValidationException("Окончание события не может быть раньше начала события.");
         }
     }
 }
