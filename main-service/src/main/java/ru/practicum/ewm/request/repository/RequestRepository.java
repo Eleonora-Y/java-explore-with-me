@@ -7,6 +7,7 @@ import ru.practicum.ewm.request.model.RequestStatus;
 
 import java.util.List;
 
+@Repository
 public interface RequestRepository extends JpaRepository<Request, Long> {
 
     long countByEventIdAndStatus(Long eventId, RequestStatus status);
